@@ -1,0 +1,8 @@
+# Add this to .gitignore to avoid committing sensitive files
+.env
+*.db
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
