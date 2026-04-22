@@ -2,6 +2,18 @@
 
 A web application to manage garden schedules and send automated email reminders to gardeners. Built with FastAPI (Python) backend and an interactive HTML/JavaScript frontend.
 
+## 🚀 Live Deployment
+
+**STATUS**: ✅ **LIVE ON RENDER**
+
+**Live URL**: https://rrbc-garden-reminder.onrender.com
+
+**Access the app online**: Visit the link above to add schedules and manage reminders!
+
+Details: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for deployment information and troubleshooting.
+
+---
+
 ## Features
 
 ✅ **Manage Gardener Schedules** - Add, edit, and delete garden care schedules  
@@ -11,39 +23,39 @@ A web application to manage garden schedules and send automated email reminders 
   - One day before the scheduled date
   - On the scheduled date itself
   - Works for any day of the week (not limited to specific days)
-✅ **Local Phase-1** - Runs entirely on your local machine  
+✅ **Live on Render** - Accessible from anywhere online
 ✅ **Responsive Design** - Works on desktop and mobile
 
 ## System Requirements
 
+**For Local Development:**
 - Python 3.8 or higher
 - Gmail account (for sending email reminders)
 - Windows/Mac/Linux
+
+**For Online Access:**
+- Just a web browser!
+- Visit: https://rrbc-garden-reminder.onrender.com
 
 ## Administration
 
 This schedule and reminder system is managed by **two administrators**. The management team ensures timely updates to the garden care schedule and deployment of reminder notifications to team members.
 
-## Installation & Setup
+## Quick Start
 
-### Step 1: Clone/Extract the Project
+### Option 1: Use Online (Recommended)
+Simply visit: **https://rrbc-garden-reminder.onrender.com**
 
-The project is already in your workspace:
-```
-e:\Chandan\Python\VS Code\RRBC Garden care Reminder App
-```
+### Option 2: Run Locally
 
-### Step 2: Set Up Python Environment
-
-1. Open PowerShell or Command Prompt in the project directory
-2. Create a virtual environment:
+#### Step 1: Create Virtual Environment
 ```powershell
 python -m venv venv
 ```
 
-3. Activate the virtual environment:
+#### Step 2: Activate Virtual Environment
 
-**Option A - Windows Command Prompt (Recommended):**
+**Windows Command Prompt:**
 ```cmd
 venv\Scripts\activate.bat
 ```

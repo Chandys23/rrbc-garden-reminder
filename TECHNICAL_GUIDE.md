@@ -600,61 +600,118 @@ Update display:
 
 ## Email Reminder System
 
-### Scheduling Architecture
+### ✅ Updated Scheduling Architecture (Deployed)
 
 ```
 FastAPI App Starts
     ↓
 APScheduler initializes
     ↓
-Creates job: schedule_reminders()
+Creates job: check_and_send_reminders()
     ↓
 Runs every 1 hour indefinitely
     ↓
 Each hour check:
-    - Get all gardeners
+    - Get all gardeners from database
     - Check today's date
-    - Check current hour
+    - Compare with scheduled dates
     - Send emails if conditions match
 ```
 
-### Reminder Logic
+### Updated Reminder Logic ✅
+
+**Sends reminders for ANY scheduled date** (not just Saturdays):
+- Reminder 1: One day BEFORE scheduled date
+- Reminder 2: ON the scheduled date itself
+
+```python
+def check_and_send_reminders():
+    today = datetime.now().date()
+    gardeners = get_all_gardeners_from_db()
+    
+    for gardener in gardeners:
+        scheduled_date = datetime.strptime(gardener['date'], '%Y-%m-%d').date()
+        day_before = scheduled_date - timedelta(days=1)
+        
+        # Send reminder ONE DAY BEFORE
+        if day_before == today:
+            print(f"📧 Sending reminder to {gardener['name']} (one day before)")
+            send_email(
+                gardener['email'],
+                gardener['name'],
+                gardener['task'],
+                gardener['date']
+            )
+        
+        # Send reminder ON THE SCHEDULED DATE
+        elif scheduled_date == today:
+            print(f"📧 Sending reminder to {gardener['name']} (scheduled date)")
+            send_email(
+                gardener['email'],
+                gardener['name'],
+                gardener['task'],
+                gardener['date']
+            )
+```
+
+### Example Timeline
+
+| Day | Event | Reminder |
+|-----|-------|----------|
+| Mon 4/24 | (no action) | - |
+| **Tue 4/25** | **SCHEDULED DATE** | ✉️ Email sent |
+| Wed 4/26 | (no action) | - |
+| Thu 4/27 | (no action) | - |
+| Fri 4/28 | (no action) | - |
+| **Sat 4/29** | **SCHEDULED DATE** | ✉️ Email sent |
+| **Fri 5/2** | (one day before 5/3) | ✉️ Email sent |
+| **Sat 5/3** | **SCHEDULED DATE** | ✉️ Email sent |
+
+### Email Template
 
 ```
-For each gardener in database:
-    
-    If scheduled_date is 5:00 (Saturday):
-        Saturday = Date where weekday == 5
-        Friday = Saturday - 1 day
-        
-        If today == Friday AND hour == 17:
-            SEND EMAIL
-        
-        If today == Saturday AND 8 <= hour < 10:
-            SEND EMAIL
-    
-    Else:
-        (Not a Saturday task, don't send anything)
+From: your_email@gmail.com
+To: gardener@example.com
+Subject: 🌿 RRBC Garden Care Reminder - Grass Cutting (Front)
+
+---
+
+Hello John,
+
+You are receiving this notification as you have an upcoming 
+schedule for Grass Cutting - Front.
+
+Scheduled Date: 2026-04-25
+
+Please ensure you complete the task as planned. Thank you for 
+taking care of our garden!
+
+Best regards,
+RRBC Garden Care Team
 ```
 
-### Email Components
-
-**From:** Your Gmail address (from .env)
-**To:** Gardener's email from database
-**Subject:** 🌿 RRBC Garden Care Reminder - Grass Cutting (Front)
-**Body:** Personalized message with:
-- Gardener's name
-- Task type
-- Scheduled date
-- Professional signature
-
-### Why Reminders Work
+### How It Works
 
 1. **Process always running** - APScheduler keeps scheduler active
-2. **Hourly checks** - Every hour, the app checks database
-3. **Persistent storage** - Schedules saved in gardeners.db
-4. **Gmail credentials** - Loaded from .env file
-5. **SMTP connection** - Secure connection to Gmail servers
+2. **Hourly checks** - Every hour checks for reminders
+3. **Date-based logic** - Compares database dates with today's date
+4. **Persistent storage** - Schedules saved in gardeners.db
+5. **Gmail credentials** - Loaded from .env file
+6. **SMTP connection** - Secure connection to Gmail servers
+
+### Scheduler Status in Logs
+
+When app deploys, you'll see:
+```
+✓ Database initialized
+✓ Reminder scheduler started (runs every 1 hour)
+```
+
+Each hour (automatically):
+```
+📧 Sending reminder to John (one day before)
+✓ Email sent to john@example.com
+```
 
 ---
 
@@ -665,50 +722,23 @@ For each gardener in database:
 ```sql
 CREATE TABLE gardeners (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    -- Unique ID that auto-increments
-    
-    date TEXT NOT NULL,
-    -- Date in format YYYY-MM-DD
-    -- Example: "2026-04-19"
-    
-    name TEXT NOT NULL,
-    -- Gardener's full name
-    -- Example: "John Doe"
-    
-    task TEXT NOT NULL,
-    -- Type of work: "Front", "Back", or "Trimming"
-    -- Used in email subject
-    
-    email TEXT NOT NULL,
-    -- Email address for sending reminders
-    -- Example: "john@example.com"
-    
-    mobile TEXT NOT NULL,
-    -- Phone number (for future SMS feature)
-    -- Example: "905-621-1034"
-    
+    date TEXT NOT NULL,           -- YYYY-MM-DD format
+    name TEXT NOT NULL,           -- Gardener's name
+    task TEXT NOT NULL,           -- "Front", "Back", or "Trimming"
+    email TEXT NOT NULL,          -- Email address for reminders
+    mobile TEXT NOT NULL,         -- Phone number
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    -- When record was created
-    -- Auto-updated by database
 )
 ```
 
-### Query Examples
+### Sample Data
 
-**Get all Saturday schedules:**
-```sql
-SELECT * FROM gardeners 
-WHERE date LIKE '%-%-06'  -- Not ideal, but shows concept
 ```
-
-**Get schedules for a specific gardener:**
-```sql
-SELECT * FROM gardeners WHERE name = 'John Doe'
-```
-
-**Count total schedules:**
-```sql
-SELECT COUNT(*) FROM gardeners
+id | date       | name   | task     | email              | mobile
+---|------------|--------|----------|--------------------|-----------
+1  | 2026-04-25 | John   | Front    | john@example.com   | 905-621-1034
+2  | 2026-04-30 | Sarah  | Back     | sarah@example.com  | 416-555-2019
+3  | 2026-05-05 | Mike   | Trimming | mike@example.com   | 647-555-3045
 ```
 
 ---
@@ -717,24 +747,83 @@ SELECT COUNT(*) FROM gardeners
 
 ```
 GMAIL_EMAIL=your_email@gmail.com
-GMAIL_PASSWORD=your_app_password_here
+GMAIL_PASSWORD=your_16_character_app_password
 ```
+
+**Where to get app password:**
+1. Go to https://myaccount.google.com/apppasswords
+2. Select "Mail" and "Windows Computer" (or your device)
+3. Google generates 16-character password
+4. Copy to .env file
 
 **Why needed?**
-- Credentials never hardcoded in source
-- Easy to change without modifying code
-- Can commit code to GitHub safely
-- Different credentials per environment (dev/prod)
+- Credentials never hardcoded in source code
+- Can change without modifying code
+- Safe to commit code to GitHub
+- Different credentials per environment (local/production)
 
-**How used?**
-```python
-from dotenv import load_dotenv
-import os
+---
 
-load_dotenv()  # Load .env file
-email = os.getenv("GMAIL_EMAIL")
-password = os.getenv("GMAIL_PASSWORD")
+## API Endpoints Reference
+
+### GET /api/gardeners
+**Fetch all gardeners**
 ```
+Response: [{id, date, name, task, email, mobile}, ...]
+```
+
+### POST /api/gardeners
+**Add new gardener**
+```
+Body: {date, name, task, email, mobile}
+Response: {id, message: "Gardener added successfully"}
+```
+
+### GET /api/gardeners/{id}
+**Fetch specific gardener**
+```
+Response: {id, date, name, task, email, mobile}
+```
+
+### PUT /api/gardeners/{id}
+**Update gardener**
+```
+Body: {date, name, task, email, mobile}
+Response: {message: "Gardener updated successfully"}
+```
+
+### DELETE /api/gardeners/{id}
+**Delete gardener**
+```
+Response: {message: "Gardener deleted successfully"}
+```
+
+---
+
+## Deployment & Live Status
+
+### ✅ LIVE ON RENDER
+
+**Current Production Setup:**
+- **URL**: https://rrbc-garden-reminder.onrender.com
+- **Platform**: Render.com (Free Tier)
+- **Python Version**: 3.14
+- **Status**: Active and running
+
+**Build Configuration:**
+```
+Build Command: pip install -r requirements.txt
+Start Command: sh -c "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+```
+
+**GitHub Repository:**
+https://github.com/Chandys23/rrbc-garden-reminder (Public)
+
+**See DEPLOYMENT_GUIDE.md for:**
+- Complete setup walkthrough
+- Issues encountered & solutions
+- Troubleshooting guide
+- Performance & scaling information
 
 ---
 
