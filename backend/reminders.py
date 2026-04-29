@@ -30,7 +30,9 @@ You are receiving this notification as you have an upcoming schedule for Grass C
 
 Scheduled Date: {scheduled_date}
 
-Please ensure you complete the task as planned. Thank you for taking care of our garden!
+If you are unable to cut as scheduled please trade with someone else on the list or contact our Alternate- Jack Premsler. 
+
+Thank you for taking care of our garden!
 
 Best regards,
 RRBC Garden Care Team
