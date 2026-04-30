@@ -2,14 +2,12 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
-import sqlite3
-from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+from database import get_connection, get_cursor
 
-DB_PATH = Path(__file__).parent.parent / "gardeners.db"
+load_dotenv()
 
 class EmailReminder:
     def __init__(self):
@@ -59,12 +57,12 @@ RRBC Garden Care Team
     def get_gardeners_from_db(self):
         """Get all gardeners from database"""
         try:
-            conn = sqlite3.connect(str(DB_PATH))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
+            conn = get_connection()
+            cursor = get_cursor(conn)
             
             cursor.execute("SELECT * FROM gardeners")
             gardeners = cursor.fetchall()
+            cursor.close()
             conn.close()
             
             return [dict(row) for row in gardeners]

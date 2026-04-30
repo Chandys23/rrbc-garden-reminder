@@ -4,13 +4,12 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
-import sqlite3
 from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import os
 
-from database import init_db, get_connection, DB_PATH
+from database import init_db, get_connection, get_cursor
 from reminders import schedule_reminders
 
 # Initialize FastAPI app
@@ -66,11 +65,11 @@ def get_all_gardeners():
     """Get all gardeners"""
     try:
         conn = get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
         cursor.execute("SELECT * FROM gardeners ORDER BY date ASC")
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         return [dict(row) for row in rows]
@@ -82,11 +81,11 @@ def get_gardener(gardener_id: int):
     """Get a specific gardener"""
     try:
         conn = get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
-        cursor.execute("SELECT * FROM gardeners WHERE id = ?", (gardener_id,))
+        cursor.execute("SELECT * FROM gardeners WHERE id = %s", (gardener_id,))
         row = cursor.fetchone()
+        cursor.close()
         conn.close()
         
         if not row:
@@ -106,15 +105,18 @@ def create_gardener(gardener: Gardener):
         datetime.strptime(gardener.date, '%Y-%m-%d')
         
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
         cursor.execute("""
             INSERT INTO gardeners (date, name, task, email, mobile)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
         """, (gardener.date, gardener.name, gardener.task, gardener.email, gardener.mobile))
         
+        result = cursor.fetchone()
+        gardener_id = result['id'] if result else None
         conn.commit()
-        gardener_id = cursor.lastrowid
+        cursor.close()
         conn.close()
         
         return {"id": gardener_id, "message": "Gardener added successfully"}
@@ -131,19 +133,21 @@ def update_gardener(gardener_id: int, gardener: GardenerUpdate):
         datetime.strptime(gardener.date, '%Y-%m-%d')
         
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
         cursor.execute("""
             UPDATE gardeners 
-            SET date = ?, name = ?, task = ?, email = ?, mobile = ?
-            WHERE id = ?
+            SET date = %s, name = %s, task = %s, email = %s, mobile = %s
+            WHERE id = %s
         """, (gardener.date, gardener.name, gardener.task, gardener.email, gardener.mobile, gardener_id))
         
         if cursor.rowcount == 0:
+            cursor.close()
             conn.close()
             raise HTTPException(status_code=404, detail="Gardener not found")
         
         conn.commit()
+        cursor.close()
         conn.close()
         
         return {"message": "Gardener updated successfully"}
@@ -159,15 +163,17 @@ def delete_gardener(gardener_id: int):
     """Delete a gardener"""
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
-        cursor.execute("DELETE FROM gardeners WHERE id = ?", (gardener_id,))
+        cursor.execute("DELETE FROM gardeners WHERE id = %s", (gardener_id,))
         
         if cursor.rowcount == 0:
+            cursor.close()
             conn.close()
             raise HTTPException(status_code=404, detail="Gardener not found")
         
         conn.commit()
+        cursor.close()
         conn.close()
         
         return {"message": "Gardener deleted successfully"}

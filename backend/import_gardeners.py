@@ -1,18 +1,11 @@
-#!/usr/bin/env python3
-"""
-Bulk Import Gardeners from Excel File
-Reads Schedule.xls and inserts all gardeners into the database
-"""
-
 import sys
 from pathlib import Path
-import sqlite3
 from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from database import get_connection, init_db
+from database import get_connection, get_cursor, init_db
 
 try:
     from openpyxl import load_workbook
@@ -124,11 +117,11 @@ class BulkImporter:
                 date_value = str(date_value).strip()
             
             conn = get_connection()
-            cursor = conn.cursor()
+            cursor = get_cursor(conn)
             
             cursor.execute("""
                 INSERT INTO gardeners (date, task, name, email, mobile)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 date_value,
                 str(record['task']).strip(),
@@ -138,6 +131,7 @@ class BulkImporter:
             ))
             
             conn.commit()
+            cursor.close()
             conn.close()
             return True
             
