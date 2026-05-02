@@ -401,11 +401,15 @@
         const API_URL = '/api';
         let editingId = null;
 
+        // Set timezone to EST
+        const EST_TIMEZONE = 'America/New_York';
+
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
             loadSchedules();
-            // Set today's date as default
-            document.getElementById('date').valueAsDate = new Date();
+            // Set today's date as default (in EST)
+            const estDate = new Date(new Date().toLocaleString('en-US', { timeZone: EST_TIMEZONE }));
+            document.getElementById('date').valueAsDate = estDate;
         });
 
         function showMessage(message, type = 'success') {
@@ -418,21 +422,30 @@
         }
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            // Parse date string without timezone conversion
+            // Format: YYYY-MM-DD → "May 2, 2026"
+            const [year, month, day] = dateStr.split('-');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthIndex = parseInt(month) - 1;
+            const dayNum = parseInt(day);
+            return `${monthNames[monthIndex]} ${dayNum}, ${year}`;
         }
 
         function getUpcomingCount() {
-            const today = new Date();
-            const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            // Get today's date in EST timezone
+            const estToday = new Date(new Date().toLocaleString('en-US', { timeZone: EST_TIMEZONE }));
+            estToday.setHours(0, 0, 0, 0);
+            const nextWeek = new Date(estToday.getTime() + 7 * 24 * 60 * 60 * 1000);
             
             const tableRows = document.querySelectorAll('#tableBody tr');
             let count = 0;
             tableRows.forEach(row => {
                 if (row.classList.contains('no-data')) return;
-                const dateCell = row.cells[0].textContent;
-                const rowDate = new Date(dateCell);
-                if (rowDate >= today && rowDate <= nextWeek) {
+                const dateStr = row.cells[0].textContent;
+                // Parse date string "Mon, 02 May 2026" or similar
+                const rowDate = new Date(dateStr);
+                rowDate.setHours(0, 0, 0, 0);
+                if (rowDate >= estToday && rowDate <= nextWeek) {
                     count++;
                 }
             });
