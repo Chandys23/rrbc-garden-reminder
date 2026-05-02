@@ -191,6 +191,9 @@ def delete_gardener(gardener_id: int):
 def reimport_gardeners():
     """Re-import all gardeners from Schedule.xlsx - clears existing data"""
     try:
+        # Quick reimport using BulkImporter
+        importer = BulkImporter()
+        
         # Clear existing records
         conn = get_connection()
         cursor = get_cursor(conn)
@@ -201,25 +204,19 @@ def reimport_gardeners():
         conn.close()
         
         # Re-import fresh data
-        importer = BulkImporter()
         success = importer.import_from_excel()
         
-        if success:
-            return {
-                "status": "success",
-                "message": f"Successfully cleared {deleted_count} old records and imported {importer.imported_count} gardeners",
-                "deleted": deleted_count,
-                "imported": importer.imported_count
-            }
-        else:
-            return {
-                "status": "error",
-                "message": f"Import completed with {importer.error_count} errors",
-                "imported": importer.imported_count,
-                "failed": importer.error_count
-            }
+        return {
+            "status": "success" if success else "error",
+            "deleted": deleted_count,
+            "imported": importer.imported_count,
+            "failed": importer.error_count
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reimport failed: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 @app.get("/api/test")
 def test_endpoint():
