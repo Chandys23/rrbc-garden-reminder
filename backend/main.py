@@ -8,9 +8,14 @@ from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import os
+import sys
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
 
 from database import init_db, get_connection, get_cursor
 from reminders import schedule_reminders
+from import_gardeners import BulkImporter
 
 # Initialize FastAPI app
 app = FastAPI(title="RRBC Garden Reminder API")
@@ -181,6 +186,40 @@ def delete_gardener(gardener_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/reimport")
+def reimport_gardeners():
+    """Re-import all gardeners from Schedule.xlsx - clears existing data"""
+    try:
+        # Clear existing records
+        conn = get_connection()
+        cursor = get_cursor(conn)
+        cursor.execute("DELETE FROM gardeners")
+        conn.commit()
+        deleted_count = cursor.rowcount
+        cursor.close()
+        conn.close()
+        
+        # Re-import fresh data
+        importer = BulkImporter()
+        success = importer.import_from_excel()
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Successfully cleared {deleted_count} old records and imported {importer.imported_count} gardeners",
+                "deleted": deleted_count,
+                "imported": importer.imported_count
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Import completed with {importer.error_count} errors",
+                "imported": importer.imported_count,
+                "failed": importer.error_count
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reimport failed: {str(e)}")
 
 # Serve frontend
 @app.get("/")

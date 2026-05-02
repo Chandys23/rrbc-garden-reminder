@@ -6,6 +6,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 
 from database import get_connection, get_cursor, init_db
+import database
 
 try:
     from openpyxl import load_workbook
@@ -119,16 +120,29 @@ class BulkImporter:
             conn = get_connection()
             cursor = get_cursor(conn)
             
-            cursor.execute("""
-                INSERT INTO gardeners (date, task, name, email, mobile)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                date_value,
-                str(record['task']).strip(),
-                str(record['name']).strip(),
-                str(record['email']).strip(),
-                str(record['phone']).strip()
-            ))
+            # Use correct SQL syntax based on database type (check current value)
+            if database.DB_TYPE == 'sqlite':
+                cursor.execute("""
+                    INSERT INTO gardeners (date, task, name, email, mobile)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (
+                    date_value,
+                    str(record['task']).strip(),
+                    str(record['name']).strip(),
+                    str(record['email']).strip(),
+                    str(record['phone']).strip()
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO gardeners (date, task, name, email, mobile)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    date_value,
+                    str(record['task']).strip(),
+                    str(record['name']).strip(),
+                    str(record['email']).strip(),
+                    str(record['phone']).strip()
+                ))
             
             conn.commit()
             cursor.close()
