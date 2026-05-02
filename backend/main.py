@@ -221,6 +221,11 @@ def reimport_gardeners():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reimport failed: {str(e)}")
 
+@app.get("/api/test")
+def test_endpoint():
+    """Simple test endpoint to verify deployment"""
+    return {"status": "ok", "message": "Test endpoint working"}
+
 # Serve frontend
 @app.get("/")
 def serve_frontend():
